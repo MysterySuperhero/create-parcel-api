@@ -1,0 +1,655 @@
+openapi: 3.0.3
+info:
+  title: Configurable parcel API
+  version: '1'
+
+servers:
+  - url: http://localhost:8080/
+    description: API конфигурируемой посылки.
+
+paths:
+  /v2/createParcel:
+    post:
+      description: |
+        Создание посылки.
+        
+        Метод реализуется на стороне службы доставки.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateParcelRequest"
+      responses:
+        '200':
+          description: Посылка создана / случилась ошибка.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateParcelResponse"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+
+    # /v2/createParcel begin
+
+    CreateParcelRequest:
+      required:
+        - orderID
+        - parcelID
+        - items
+        - sender
+        - receiver
+        - payment
+      properties:
+        orderID:
+          type: string
+          description: |
+            Идентификатор заказа Avito. 
+            
+            Идентификатора заказа – заготовка для консолидации посылок, которая пока не реализована. У заказа может быть много посылок, 
+            служба доставки через orderID может их связать между собой.
+          example: "38108624273277776"
+        parcelID:
+          type: string
+          description: |
+            Идентификатор посылки Avito. 
+            
+            По этому номеру Avito ожидает поступление статусов. По этому номеру посылка может отменяться.
+          example: "P00012345"
+        barcodes:
+          type: array
+          description: |
+            Если вам неинтересна кросс-доставка, то дальше не читайте.
+            
+            Штрихкоды других служб доставок, которые относятся к создаваемой посылке.
+            
+            Для того чтобы 3PL2 могла связать пришедшую коробку от 3PL1 с посылкой, которую Авито создает этим запросом, 
+            дополнительно в запросе указывается этот параметр.
+            
+            `barcodes` – массив. Это сделано на случай, если коробка посылки в случае каких-либо грядущих сложных схем доставки приедет вся обклеенная штрихкодами. 
+            Чтобы повысить вероятность распознавания посылки приемщиком, Avito передает в запросе все известные ему штрихкоды. Их может быть несколько.
+          example: [ "1000001389165", "80511176616217" ]
+          items:
+            type: string
+            example:
+        items:
+          type: array
+          description: |
+            Список товаров, которые поедут в посылке.
+            
+            Содержит полное описание каждого отдельно взятого товара.
+          items:
+            $ref: "#/components/schemas/CreateParcelItem"
+        sender:
+          $ref: "#/components/schemas/CreateParcelClient"
+        receiver:
+          $ref: "#/components/schemas/CreateParcelClient"
+        payment:
+          $ref: "#/components/schemas/CreateParcelPayment"
+        options:
+          $ref: "#/components/schemas/CreateParcelOptions"
+
+    CreateParcelItem:
+      required:
+        - id
+        - title
+        - cost
+        - quantity
+      properties:
+        id:
+          type: integer
+          description: Идентификатор товара Avito.
+          example: 2574253956
+        title:
+          type: string
+          description: Название.
+          example: "Подшипники для самокатов и роликов Abec 7"
+          maxLength: 100
+        "description":
+          type: string
+          description: Описание.
+          example: |
+            В наличии🔥 Подшипники для самокатов и роликов Abec 7
+
+            Сервис-магазин RollersLife на Савушкина 141(Тк Меркурий)
+
+            ▬▬▬▬▬▬▬▬▬
+
+            Описание товара:
+
+            ♦ Подшипники для роликовых коньков и самокатов. цена указана за 1 штуку. 608 2rs Abec: 7 Пыльник: Пластик- полиуретановый Тип подшипника: закрытый Размеры: d 8 / D 22 / B 7 Комплект подшипников для роликовых коньков 16 штук 1000 рублей
+
+            ♦ Запчасть можно купить в нашей мастерской, при необходимости есть услуга по ремонту.
+
+            ▬▬▬▬▬▬▬▬▬
+
+            ❗️ В наличии большой ассортимент самокатов и запчастей ❗️
+
+            💰 Оплата любым удобным способом 💳
+
+            ЗВОНИТЕ/ПИШИТЕ ПРЯМО СЕЙЧАС
+
+            ▬▬▬▬▬▬▬▬▬
+
+            🔧 Ремонтируем
+
+            ✅ Электро-самокаты, гироскутеры, самокаты детские и взрослые,
+
+            ✅ Роликовые коньки, скейтборды, беговелы, велосипеды,
+
+            ✅ Детские коляски, чемоданы, тележки,
+
+            ✅ Горные лыжи, сноуборды.
+
+            ⚙️ Электросамокаты Kugoo, Xiaomi, Ninebot, Jack Hot, Hoverbot.
+
+            ⚙️ Гироскутеры всех брендов Smart Balance, Hoverbot и другие.
+
+            ▬▬▬▬▬▬▬▬▬
+
+            👉 Осуществляем доставку курьером по Санкт-Петербургу
+          maxLength: 1000
+        cost:
+          type: integer
+          description: Объявленная стоимость в копейках.
+          example: 1000
+        quantity:
+          type: integer
+          description: Количество единиц товара.
+          example: 1
+          minimum: 1
+        breadcrumbs:
+          description: |
+            Дерево категорий как на сайте Avito.
+            
+            Используется для проверки целостности и комплектности. Позволяет сотруднику на ПВЗ понимать, что это за товар.
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateParcelItemBreadcrumb"
+        dimensions:
+          $ref: "#/components/schemas/CreateParcelItemDimensions"
+        weight:
+          $ref: "#/components/schemas/CreateParcelItemWeight"
+        imagesUrls:
+          $ref: "#/components/schemas/CreateParcelItemImagesUrls"
+
+    CreateParcelClient:
+      description: |
+        Описание отправителя / получателя.
+      required:
+        - "type"
+        - phones
+        - email
+        - name
+        - delivery
+      properties:
+        "type":
+          type: string
+          description: |
+            Тип отправителя.
+            
+            Отправителем может быть:
+              - `PRIVATE` – частное лицо.
+              - `LEGAL` – юридическое лицо (для B2C-доставки).
+              - `3PL` – служба доставки (для кросс-доставки).
+          example: "PRIVATE"
+          enum: [ "PRIVATE", "LEGAL", "3PL" ]
+        phones:
+          type: array
+          description: |
+            Список номеров телефона для связи.
+            
+            Формат номеров телефона не регламентирован.
+          example: [ "88005553535", "79999999999", "+79859991234" ]
+          items:
+            type: string
+            minLength: 1
+        email:
+          type: string
+          description: Электронная почта.
+          example: "any_email@mail.com"
+          format: email
+          maxLength: 320
+        name:
+          type: string
+          description: |
+            Наименование клиента.
+            
+            Если клиент – частное лицо, то здесь будет ФИО. 
+            Если юридическое лицо или служба доставки – наименование организации.
+          example: "Иванов Иван Иванович"
+          maxLength: 255
+        delivery:
+          $ref: "#/components/schemas/CreateParcelClientDelivery"
+
+    CreateParcelPayment:
+      required:
+        - items
+        - delivery
+      properties:
+        items:
+          type: object
+          required:
+            - status
+            - cost
+          properties:
+            status:
+              $ref: "#/components/schemas/CreateParcelPaymentStatus"
+            cost:
+              type: integer
+              description: Стоимость в копейках.
+              example: 10000
+              minimum: 0
+        delivery:
+          type: object
+          required:
+            - status
+            - costWithoutVat
+          properties:
+            status:
+              $ref: "#/components/schemas/CreateParcelPaymentStatus"
+            costWithoutVat:
+              type: integer
+              description: Стоимость в копейках без НДС.
+              example: 10000
+              minimum: 0
+
+    CreateParcelOptions:
+      properties:
+        return:
+          type: object
+          description: |
+            Опции возврата.
+            
+            Опции определяют политику возвратов. Доступен ли возврат, или что делать в определенных случаях.
+          properties:
+            receiver:
+              $ref: "#/components/schemas/CreateParcelClient"
+            refused:
+              $ref: "#/components/schemas/CreateParcelOptionsReturnPolicy"
+            unclaimed:
+              $ref: "#/components/schemas/CreateParcelOptionsReturnPolicy"
+            returned:
+              $ref: "#/components/schemas/CreateParcelOptionsReturnPolicy"
+        tags:
+          type: array
+          description: |
+            Список специфичных особенностей посылки.
+            
+            На определенные значения в тегах можно завязывать логику. 
+            Те теги, которые вас, как службу доставки, не интересуют, игнорируйте.
+            Список может постоянно пополняться.
+            
+            - `CART` – посылка, которая содержит в себе несколько товаров.
+            - `C2C` – посылка C2C.
+            - `B2C` – посылка B2C.
+            - `RETURN` - возвратная посылка.
+            - `X_DELIVERY` – посылка кросс-доставочная.
+            - `X_DELIVERY_FIRST_LEG` – кросс-доставочная посылка первого плеча.
+            - `X_DELIVERY_LAST_LEG` – кросс-доставочная посылка последнего плеча.
+          enum: [
+            "C2C",
+            "B2C",
+            "X_DELIVERY",
+            "X_DELIVERY_FIRST_LEG",
+            "X_DELIVERY_LAST_LEG",
+            "RETURN"
+          ]
+
+    CreateParcelItemBreadcrumb:
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Название категории
+          example: "Спорт и отдых"
+          minLength: 0
+          maxLength: 255
+
+    CreateParcelItemDimensions:
+      required:
+        - accuracy
+        - values
+      properties:
+        accuracy:
+          $ref: "#/components/schemas/CreateParcelPropertyAccuracy"
+        values:
+          type: array
+          example: [ 20, 20, 20 ]
+          description: |
+            Габариты в сантиметрах.
+            
+            В порядке: длина, высота, ширина. В случае, если не имеет значения пространственное положение коробки, можно отсортировать от большего к меньшему.
+          minLength: 3
+          maxLength: 3
+          items:
+            type: integer
+            minimum: 1
+            maximum: 200
+
+    CreateParcelItemWeight:
+      required:
+        - accuracy
+        - values
+      properties:
+        accuracy:
+          $ref: "#/components/schemas/CreateParcelPropertyAccuracy"
+        value:
+          type: integer
+          description: Вес в граммах.
+          minimum: 1
+          maximum: 50000
+
+    CreateParcelItemImagesUrls:
+      required:
+        - listing
+        - list
+      properties:
+        listing:
+          type: string
+          description: |
+            URL основной фотографии.
+            
+            По умолчанию CDN Avito картинку в webp. Но есть опция при необходимости через заголовок 'Accept: image/jpeg' запросить в jpeg или png. 
+            Вернется картинка либо в jpg, либо в png, это зависит от схемы хранения картинки.
+          example: "//24.img.avito.st/image/1/1.pUbrSba6Ca_d4MuqrTPvNzbqD6tfagFtWuoNp1_iCw.kszrqWjK0pNKI4ayaT821U-Ln2lzT8lSuqNt7pqedno"
+        list:
+          type: array
+          description: |
+            Список URL-ов фотографий.
+            
+            По умолчанию CDN Avito картинку в webp. Но есть опция при необходимости через заголовок 'Accept: image/jpeg' запросить в jpeg или png.
+            Вернется картинка либо в jpg, либо в png, это зависит от схемы хранения картинки.
+          example: [
+            "//24.img.avito.st/image/1/1.pUbrSba6Ca_d4MuqrTPvNzbqD6tfagFtWuoNp1_iCw.kszrqWjK0pNKI4ayaT821U-Ln2lzT8lSuqNt7pqedno",
+            "//19.img.avito.st/image/1/1.rlbjCLa6Ar_VocC6s3LkJz6rBLtXKwp9UqsGt1ejAA.C4io31wn3Rjlc7SJGgeIVyxzC9LnoQUkGwmyaQ67-qs",
+            "//90.img.avito.st/image/1/1.Z0Dh2ba6y6nXcAmso6AtMTx6za1V-sNrUHrPoVVyyQ.T1yZ87ZDiUSrUQNTYJkDbXub3lHC9_XBFtc8D1jOt7c",
+            "//76.img.avito.st/image/1/1.QTUceba67dwq0C_ZEngLRMHa69ioWuUerdrp1KjS7w.JABYB8SsN5W6u5Y6WR49R8kKzr5IsGxF5HTjQPnygYQ",
+            "//85.img.avito.st/image/1/1.eITjzra61G3VZxZon88y9T5t0mlX7dyvUm3QZVdl1g.aQyF5iZccldCZ5p9qtb-DZZobnPzdCSanQJmdHXQvdc"
+          ]
+          items:
+            type: string
+
+    CreateParcelClientDelivery:
+      required:
+        - "type"
+      properties:
+        "type":
+          type: string
+          description: |
+            Тип доставки.
+            
+            - `TERMINAL` – в пункт выдачи заказов.
+            - `SORTING_CENTER` – в сортировочный центр (для кросс-доставки).
+          example: "TERMINAL"
+          enum: [ "TERMINAL", "SORTING_CENTER" ]
+        terminal:
+          $ref: "#/components/schemas/CreateParcelClientDeliveryTerminal"
+        sortingCenter:
+          $ref: "#/components/schemas/CreateParcelClientDeliverySortingCenter"
+        completenessAndIntegrity:
+          type: array
+          description: |
+            Где осуществляется проверка целостности и комплектности вложений посылки.
+            
+            - `DIRECT_FLOW` – на прямом потоке.
+            - `RETURN_FLOW` – на возвратном.
+          example: [
+            "DIRECT_FLOW",
+            "RETURN_FLOW"
+          ]
+          items:
+            type: string
+            enum: [ "DIRECT_FLOW", "RETURN_FLOW" ]
+
+    CreateParcelClientDeliveryTerminal:
+      description: |
+        Актуально, если доставка будет осуществляться из / в пункт выдачи заказов.
+      required:
+        - provider
+        - id
+        - accuracy
+      properties:
+        provider:
+          type: string
+          description: Идентификатор службы доставки владельца ПВЗ.
+          example: "exmail"
+        id:
+          type: string
+          description: Идентификатор ПВЗ по версии службы доставки владельца.
+          example: "123"
+        accuracy:
+          $ref: "#/components/schemas/CreateParcelPropertyAccuracy"
+
+    CreateParcelClientDeliverySortingCenter:
+      description: |
+        Актуально, если доставка будет осуществлять из / в сортировочный центр.
+      required:
+        - provider
+        - id
+        - accuracy
+      properties:
+        provider:
+          type: string
+          description: Идентификатор службы доставки владельца сортировочного центра.
+          example: "exmail"
+        id:
+          type: string
+          description: Идентификатор сортировочного центра по версии службы доставки владельца.
+          example: "123"
+        accuracy:
+          $ref: "#/components/schemas/CreateParcelPropertyAccuracy"
+
+    CreateParcelPropertyAccuracy:
+      type: string
+      description: |
+        Точность габаритов.
+        
+        На текущий момент точность габаритов всегда `APPROXIMATE`.
+      example: "APPROXIMATE"
+      enum: [ "EXACT", "APPROXIMATE" ]
+
+    CreateParcelPaymentStatus:
+      type: string
+      description: |
+        Статус оплаты.
+        
+        - `PAID` – оплачено.
+        - `ON_DELIVERY` – оплата при доставке.
+      example: "PAID"
+      enum: [ "PAID", "ON_DELIVERY" ]
+
+    CreateParcelOptionsReturnPolicy:
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          description: |
+            Какое действие выполнить в случае возврата посылки.
+            
+            - `DISABLED` – возврат недоступен.
+            - `DESTROY` – утилизировать.
+            - `RETURN_TO_DEPARTURE_POINT` – вернуть в точку отправки.
+            - `RETURN_TO_RECEIVER` – вернуть специально заданному получателю. См. объект `options.return.receiver`.
+            - `MOVE_TO_ON_DEMAND_STORAGE` – отправить на склад.
+          example: "DESTROY"
+          enum: [
+            "DISABLED",
+            "DESTROY",
+            "RETURN_TO_DEPARTURE_POINT",
+            "RETURN_TO_RECEIVER",
+            "MOVE_TO_ON_DEMAND_STORAGE"
+          ]
+        after:
+          type: object
+          description: |
+            Через какое время выполнить действие `action`.
+            
+            Отсутствие поля означает, что выполнить нужно сразу.
+          required:
+            - unit
+            - value
+          properties:
+            unit:
+              type: string
+              description: Единица интервала.
+              example: "DAY"
+              enum: [ "DAY" ]
+            value:
+              type: integer
+              description: Через сколько `unit` выполнить действие `action`.
+              example: 14
+              minimum: 1
+
+    CreateParcelResponse:
+      properties:
+        data:
+          $ref: "#/components/schemas/CreateParcelData"
+        error:
+          $ref: "#/components/schemas/CreateParcelError"
+
+    CreateParcelData:
+      type: object
+      description: |
+        Тело ответа.
+
+        Поле присутствует, если запрос был успешно обработан. Если случилась ошибка, то поле отсутствует.
+      required:
+        - dispatchNumber
+        - trackingNumber
+      properties:
+        dispatchNumber:
+          type: string
+          description: Идентификатор посылки по версии службы доставки.
+          example: "00000138916"
+        trackingNumber:
+          type: string
+          description: Трек-номер посылки по версии службы доставки.
+          example: "00000138916"
+        barcodes:
+          type: array
+          description: |
+            Штрихкоды посылки.
+
+            Штрихкоды обязательны к возврату в случае кросс-доставки.
+          example: [ "1000001389165", "1000001389166" ]
+          minLength: 1
+          items:
+            type: string
+
+    CreateParcelError:
+      type: object
+      description: |
+        Ошибка создания посылки.
+
+        Поле присутствует, если запрос не был успешно обработан. Если запрос был успешно обработан, то поле отсутствует.
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: |
+            Код ошибки.
+
+            - `VALIDATION_ERROR` – ошибка валидации данных (например, длина передаваемого поля превышает допустимые лимиты, или какое-то поле отсутствует). 
+            В поле `error.message` должно содержаться пояснение, какое поле не прошло валидацию.
+            - `UNSUPPORTED_PARAM_ERROR` – в запросе получен неподдерживаемый параметр. В поле `error.message` должно содержаться пояснение, какое поле не поддерживается.
+            - `TERMINAL_UNAVAILABLE` – терминал, указанный в запросе, недоступен для создания посылки. В поле `error.message` должно содержаться пояснение причины недоступности терминала.
+            - `SORTING_CENTER_UNAVAILABLE` – сортировочный центр, указанный в запросе, недоступен для создания посылки. В поле error.message должно содержаться пояснение причины недоступности сортировочного центра.
+
+            Все перечисленные ошибки – "терминальные". 
+            При получении этих ошибок Avito не будет выполнять повторные запросы, т.к. повтор приведет к тому же результату.
+
+            Список в дальнейшем может пополняться.
+          example: "VALIDATION_ERROR"
+          enum: [
+            "VALIDATION_ERROR",
+            "UNSUPPORTED_PARAM_ERROR",
+            "TERMINAL_UNAVAILABLE",
+            "SORTING_CENTER_UNAVAILABLE",
+          ]
+        message:
+          $ref: "#/components/schemas/ErrorMessage"
+
+    # /v2/createParcel end
+
+    # Common
+
+    Error:
+      type: object
+      description: Ошибка.
+      required:
+        - code
+        - message
+      properties:
+        code:
+          $ref: "#/components/schemas/ErrorCode"
+        message:
+          $ref: "#/components/schemas/ErrorMessage"
+
+    ErrorCode:
+      type: string
+      description: |
+        Код ошибки.
+
+        Поле в общем случае должно использоваться автоматикой для обработки ошибки.
+      example: "ANY_ERROR"
+
+    ErrorMessage:
+      type: string
+      description: |
+        Человекочитаемые детали произошедшей ошибки. 
+
+        Поле будет использоваться живыми людьми для диагностирования проблемы.
+      example: "Something went wrong, due to position of Mercury."
+
+  responses:
+    Unauthorized:
+      description: Требуется аутентификация.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Неверный Token/Oauth Scope.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                $ref: '#/components/schemas/Error'
+
+    InternalServerError:
+      description: Internal Server Error.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                $ref: '#/components/schemas/Error'
+
+security:
+  - bearerAuth: [ ]

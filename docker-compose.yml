@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    ports:
+      - "127.0.0.1:3011:8080"
+    volumes:
+      - ./:/usr/share/nginx/html/doc
+    environment:
+      URLS: "[
+        {url: 'doc/openapi.yml', name: 'Configurable Parcel API'},
+      ]"
