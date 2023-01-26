@@ -1,6 +1,6 @@
 Запускаем:
 ```bash
-docker-compose -f docker-compose.swagger-ui.yml up
+docker-compose -f docker-compose.yml up
 ```
 
 Идём смотреть:
