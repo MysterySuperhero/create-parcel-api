@@ -402,12 +402,15 @@ components:
             
             - `TERMINAL` – в пункт выдачи заказов.
             - `SORTING_CENTER` – в сортировочный центр (для кросс-доставки).
+            - `POSTAMAT` – в постамат.
           example: "TERMINAL"
-          enum: [ "TERMINAL", "SORTING_CENTER" ]
+          enum: [ "TERMINAL", "SORTING_CENTER", "POSTAMAT" ]
         terminal:
           $ref: "#/components/schemas/CreateParcelClientDeliveryTerminal"
         sortingCenter:
           $ref: "#/components/schemas/CreateParcelClientDeliverySortingCenter"
+        postamat:
+          $ref: "#/components/schemas/CreateParcelClientDeliveryPostamat"
         completenessAndIntegrity:
           type: array
           description: |
@@ -457,6 +460,25 @@ components:
         id:
           type: string
           description: Идентификатор сортировочного центра по версии службы доставки владельца.
+          example: "123"
+        accuracy:
+          $ref: "#/components/schemas/CreateParcelPropertyAccuracy"
+
+    CreateParcelClientDeliveryPostamat:
+      description: |
+        Актуально, если доставка будет осуществляться из / в постамат.
+      required:
+        - provider
+        - id
+        - accuracy
+      properties:
+        provider:
+          type: string
+          description: Идентификатор службы доставки владельца постамата.
+          example: "exmail"
+        id:
+          type: string
+          description: Идентификатор постамата по версии службы доставки владельца.
           example: "123"
         accuracy:
           $ref: "#/components/schemas/CreateParcelPropertyAccuracy"
@@ -542,7 +564,8 @@ components:
       properties:
         dispatchNumber:
           type: string
-          description: Идентификатор посылки по версии службы доставки.
+          description: |
+            Идентификатор посылки по версии службы доставки. По нему отправитель / получатель сдает / получает посылку.
           example: "00000138916"
         trackingNumber:
           type: string
