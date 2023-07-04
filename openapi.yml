@@ -255,25 +255,35 @@ components:
               example: 10000
               minimum: 0
         delivery:
-          type: object
-          required:
-            - status
-            - cost
-            - costWithoutVat
-          properties:
-            status:
-              $ref: "#/components/schemas/CreateParcelPaymentStatus"
-            cost:
-              type: integer
-              description: Стоимость в копейках.
-              example: 10000
-              minimum: 0
-            costWithoutVat:
-              type: integer
-              description: Стоимость в копейках без НДС.
-              example: 10000
-              minimum: 0
-
+          oneOf:
+            - type: object
+              description: |
+                Данные об оплате доставки посылки с предоплатой.
+              required:
+                - status
+                - costWithoutVat
+              properties:
+                status:
+                  $ref: "#/components/schemas/CreateParcelPaymentStatus"
+                costWithoutVat:
+                  type: integer
+                  description: Стоимость в копейках без НДС.
+                  example: 10000
+                  minimum: 0
+            - type: object
+              description: |
+                Данные об оплате доставки посылки с постоплатой (COD).
+              required:
+                - status
+                - cost
+              properties:
+                status:
+                  $ref: "#/components/schemas/CreateParcelPaymentStatus"
+                cost:
+                  type: integer
+                  description: Стоимость в копейках.
+                  example: 10000
+                  minimum: 0
     CreateParcelOptions:
       properties:
         return:
