@@ -1,0 +1,437 @@
+openapi: 3.0.3
+info:
+  title: Configurable parcel API
+  version: '1'
+
+servers:
+  - url: http://localhost:8080/
+    description: API конфигурируемой посылки.
+
+paths:
+  /v2/createParcel:
+    post:
+      description: |
+        Создание посылки.
+        
+        Метод реализуется на стороне транспортной компании доставки.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateParcelRequest"
+      responses:
+        '200':
+          description: Посылка создана / случилась ошибка.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateParcelResponse"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+
+    # /v2/createParcel begin
+
+    CreateParcelRequest:
+      required:
+        - orderID
+        - parcelID
+        - items
+        - sender
+        - receiver
+      properties:
+        orderID:
+          type: string
+          description: |
+            Идентификатор заказа в Avito, в рамках которого осуществляется доставка. 
+            
+            Передается “на всякий случай” и, например, может использоваться для при логировании запросов для их быстрого 
+            поиска в случае разбора инцидентов.
+          example: "38108624273277776"
+        parcelID:
+          type: string
+          description: |
+            Уникальный идентификатор посылки в Avito. 
+            
+            Используется в качестве внешнего ключа при вызове методов, связанных с посылкой (трекинг, передача свойств, 
+            отмена посылки).
+          example: "P00012345"
+        barcodes:
+          type: array
+          description: |
+            Штрих-код(-ы), который(-е) нанесен(-ы) на посылку. 
+            
+            Позволяет(-ют) сопоставить физическую посылку по наклейке(-ам) на ней с parcelID. Штрих-кодов может быть несколько 
+            в случае многоплечевой доставки либо переклейки штрих-кода из-за повреждения упаковки. 
+            
+            ВАЖНО: штрих-код может совпадать у посылок с разным parcelID в рамках одного orderID.
+          example: [ "1000001389165", "80511176616217" ]
+          items:
+            type: string
+            example:
+        items:
+          type: array
+          description: |
+            Список товаров, которые поедут в посылке.
+            
+            Содержит расчетные весогабаритные характеристики каждого отдельно взятого товара и его оценочную стоимость.
+          items:
+            $ref: "#/components/schemas/CreateParcelItem"
+        sender:
+          $ref: "#/components/schemas/CreateParcelClient"
+        receiver:
+          $ref: "#/components/schemas/CreateParcelClient"
+        options:
+          $ref: "#/components/schemas/CreateParcelOptions"
+
+    CreateParcelItem:
+      required:
+        - cost
+        - quantity
+      properties:
+        cost:
+          type: integer
+          description: Объявленная стоимость в копейках.
+          example: 1000
+        quantity:
+          type: integer
+          description: Количество единиц товара.
+          example: 1
+          minimum: 1
+        dimensions:
+          $ref: "#/components/schemas/CreateParcelItemDimensions"
+        weight:
+          $ref: "#/components/schemas/CreateParcelItemWeight"
+
+    CreateParcelClient:
+      description: |
+        Описание отправителя / получателя.
+      required:
+        - "type"
+        - delivery
+      properties:
+        "type":
+          type: string
+          description: |
+            Тип отправителя.
+            
+            Отправителем может быть:
+              - `LEGAL` – юридическое лицо (для доставки ПВЗ->ПВЗ).
+              - `3PL` – служба доставки (для доставки с участием нескольких служб (транспортных компаний)).
+          example: "LEGAL"
+          enum: [ "LEGAL", "3PL" ]
+        delivery:
+          $ref: "#/components/schemas/CreateParcelClientDelivery"
+
+    CreateParcelOptions:
+      properties:
+        return:
+          type: object
+          description: |
+            Опции возврата.
+            
+            Опции определяют политику возвратов. Доступен ли возврат, или что делать в определенных случаях.
+          properties:
+            receiver:
+              $ref: "#/components/schemas/CreateParcelClient"
+            refused:
+              $ref: "#/components/schemas/CreateParcelOptionsReturnPolicy"
+            unclaimed:
+              $ref: "#/components/schemas/CreateParcelOptionsReturnPolicy"
+        tags:
+          type: array
+          description: |
+            Список специфичных особенностей посылки. На определенные значения в тегах можно завязывать логику. 
+
+    CreateParcelItemDimensions:
+      required:
+        - accuracy
+        - values
+      properties:
+        accuracy:
+          $ref: "#/components/schemas/CreateParcelPropertyAccuracy"
+        values:
+          type: array
+          example: [ 20, 20, 20 ]
+          description: |
+            Габариты в сантиметрах.
+            
+            В порядке: длина, высота, ширина. В случае, если не имеет значения пространственное положение коробки, можно отсортировать от большего к меньшему.
+          minLength: 3
+          maxLength: 3
+          items:
+            type: integer
+            minimum: 1
+            maximum: 200
+
+    CreateParcelItemWeight:
+      required:
+        - accuracy
+        - values
+      properties:
+        accuracy:
+          $ref: "#/components/schemas/CreateParcelPropertyAccuracy"
+        value:
+          type: integer
+          description: Вес в граммах.
+          minimum: 1
+          maximum: 50000
+
+    CreateParcelClientDelivery:
+      required:
+        - "type"
+      properties:
+        "type":
+          type: string
+          description: |
+            Тип доставки.
+            
+            - `TERMINAL` – в пункт выдачи заказов.
+            - `SORTING_CENTER` – в сортировочный центр (для передачи в другую службу).
+          example: "TERMINAL"
+          enum: [ "TERMINAL", "SORTING_CENTER"]
+        terminal:
+          $ref: "#/components/schemas/CreateParcelClientDeliveryTerminal"
+        sortingCenter:
+          $ref: "#/components/schemas/CreateParcelClientDeliverySortingCenter"
+
+    CreateParcelClientDeliveryTerminal:
+      description: |
+        Актуально, если доставка будет осуществляться из / в ПВЗ.
+      required:
+        - provider
+        - id
+        - accuracy
+      properties:
+        provider:
+          type: string
+          description: Идентификатор службы доставки владельца ПВЗ.
+          example: "avito_pvz"
+        id:
+          type: string
+          description: Идентификатор ПВЗ по версии службы доставки владельца.
+          example: "123"
+        accuracy:
+          $ref: "#/components/schemas/CreateParcelPropertyAccuracy"
+
+    CreateParcelClientDeliverySortingCenter:
+      description: |
+        Актуально, если доставка будет осуществлять из / в сортировочный центр.
+      required:
+        - provider
+        - id
+        - accuracy
+      properties:
+        provider:
+          type: string
+          description: Идентификатор службы доставки владельца сортировочного центра.
+          example: "exmail"
+        id:
+          type: string
+          description: Идентификатор сортировочного центра по версии службы доставки владельца.
+          example: "123"
+        accuracy:
+          $ref: "#/components/schemas/CreateParcelPropertyAccuracy"
+
+    CreateParcelPropertyAccuracy:
+      type: string
+      description: |
+        Точность габаритов.
+        
+        На текущий момент точность габаритов всегда `APPROXIMATE`.
+      example: "APPROXIMATE"
+      enum: [ "EXACT", "APPROXIMATE" ]
+
+    CreateParcelOptionsReturnPolicy:
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          description: |
+            Какое действие выполнить в случае возврата посылки.
+            
+            - `DISABLED` – возврат недоступен.
+            - `DESTROY` – утилизировать.
+            - `RETURN_TO_DEPARTURE_POINT` – вернуть в точку отправки.
+            - `RETURN_TO_RECEIVER` – вернуть специально заданному получателю. См. объект `options.return.receiver`.
+            - `MOVE_TO_ON_DEMAND_STORAGE` – отправить на склад.
+          example: "DESTROY"
+          enum: [
+            "DISABLED",
+            "DESTROY",
+            "RETURN_TO_DEPARTURE_POINT",
+            "RETURN_TO_RECEIVER",
+            "MOVE_TO_ON_DEMAND_STORAGE"
+          ]
+        after:
+          type: object
+          description: |
+            Через какое время выполнить действие `action`.
+            
+            Отсутствие поля означает, что выполнить нужно сразу.
+          required:
+            - unit
+            - value
+          properties:
+            unit:
+              type: string
+              description: Единица интервала.
+              example: "DAY"
+              enum: [ "DAY" ]
+            value:
+              type: integer
+              description: Через сколько `unit` выполнить действие `action`.
+              example: 14
+              minimum: 1
+
+    CreateParcelResponse:
+      properties:
+        data:
+          $ref: "#/components/schemas/CreateParcelData"
+        error:
+          $ref: "#/components/schemas/CreateParcelError"
+
+    CreateParcelData:
+      type: object
+      description: |
+        Тело ответа.
+
+        Поле присутствует, если запрос был успешно обработан. Если случилась ошибка, то поле отсутствует.
+      required:
+        - dispatchNumber
+        - trackingNumber
+        - barcodes
+      properties:
+        dispatchNumber:
+          type: string
+          description: |
+            Идентификатор посылки по версии службы доставки. По нему отправитель / получатель может сдать / получить посылку.
+          example: "00000138916"
+        trackingNumber:
+          type: string
+          description: Трек-номер посылки по версии службы доставки.
+          example: "00000138916"
+        barcodes:
+          type: array
+          description: |
+            Штрих-код(-ы) посылки.
+          example: [ "1000001389165" ]
+          minLength: 1
+          items:
+            type: string
+
+    CreateParcelError:
+      type: object
+      description: |
+        Ошибка создания посылки.
+
+        Поле присутствует, если запрос не был успешно обработан. Если запрос был успешно обработан, то поле отсутствует.
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: |
+            Код ошибки.
+
+            - `VALIDATION_ERROR` – ошибка валидации данных (например, длина передаваемого поля превышает допустимые лимиты, или какое-то поле отсутствует). 
+            В поле `error.message` должно содержаться пояснение, какое поле не прошло валидацию.
+            - `UNSUPPORTED_PARAM_ERROR` – в запросе получен неподдерживаемый параметр. В поле `error.message` должно содержаться пояснение, какое поле не поддерживается.
+            - `TERMINAL_UNAVAILABLE` – терминал, указанный в запросе, недоступен для создания посылки. В поле `error.message` должно содержаться пояснение причины недоступности терминала.
+            - `SORTING_CENTER_UNAVAILABLE` – сортировочный центр, указанный в запросе, недоступен для создания посылки. В поле error.message должно содержаться пояснение причины недоступности сортировочного центра.
+
+            Все перечисленные ошибки – "терминальные". 
+            При получении этих ошибок Avito не будет выполнять повторные запросы, т.к. повтор приведет к тому же результату.
+
+            Список в дальнейшем может пополняться.
+          example: "VALIDATION_ERROR"
+          enum: [
+            "VALIDATION_ERROR",
+            "UNSUPPORTED_PARAM_ERROR",
+            "TERMINAL_UNAVAILABLE",
+            "SORTING_CENTER_UNAVAILABLE",
+          ]
+        message:
+          $ref: "#/components/schemas/ErrorMessage"
+
+    # /v2/createParcel end
+
+    # Common
+
+    Error:
+      type: object
+      description: Ошибка.
+      required:
+        - code
+        - message
+      properties:
+        code:
+          $ref: "#/components/schemas/ErrorCode"
+        message:
+          $ref: "#/components/schemas/ErrorMessage"
+
+    ErrorCode:
+      type: string
+      description: |
+        Код ошибки.
+
+        Поле в общем случае должно использоваться автоматикой для обработки ошибки.
+      example: "ANY_ERROR"
+
+    ErrorMessage:
+      type: string
+      description: |
+        Человекочитаемые детали произошедшей ошибки. 
+
+        Поле будет использоваться живыми людьми для диагностирования проблемы.
+      example: "Something went wrong, due to position of Mercury."
+
+  responses:
+    Unauthorized:
+      description: Требуется аутентификация.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Неверный Token/Oauth Scope.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                $ref: '#/components/schemas/Error'
+
+    InternalServerError:
+      description: Internal Server Error.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                $ref: '#/components/schemas/Error'
+
+security:
+  - bearerAuth: [ ]
