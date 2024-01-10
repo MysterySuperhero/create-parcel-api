@@ -10,4 +10,5 @@ services:
     environment:
       URLS: "[
         {url: 'doc/openapi.yml', name: 'Configurable Parcel API'},
+        {url: 'doc/openapi_2pl.yml', name: 'Configurable Parcel API for 2PL'},
       ]"
