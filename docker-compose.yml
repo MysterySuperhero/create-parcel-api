@@ -11,4 +11,5 @@ services:
       URLS: "[
         {url: 'doc/openapi.yml', name: 'Configurable Parcel API'},
         {url: 'doc/openapi_2pl.yml', name: 'Configurable Parcel API for 2PL'},
+        {url: 'doc/openapi_2pl_pudo.yml', name: 'Pudo exchange API'},
       ]"

@@ -1,0 +1,454 @@
+openapi: 3.0.3
+info:
+  title: Pudo exchange API
+  version: '1'
+
+servers:
+  - url: http://localhost:8080/
+    description: API создания и редактирования точек (ПВЗ).
+
+paths:
+  /addPoint/:
+    post:
+      description: |
+        Создание точки (ПВЗ).
+
+        Метод реализуется на стороне транспортной компании.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddPointRequest"
+      responses:
+        '200':
+          description: Точка (ПВЗ) создана / случилась ошибка.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddPointResponse"
+  /updatePoint/:
+    post:
+      description: |
+        Обновление данных точки (ПВЗ).
+
+        Метод реализуется на стороне транспортной компании.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePointRequest"
+      responses:
+        '200':
+          description: Точка (ПВЗ) отредактирована / случилась ошибка.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdatePointResponse"
+  /sendAddPointResult/:
+    post:
+      description: |
+        Метод отправки результата создания точки (ПВЗ).
+
+        Метод реализуется на стороне Avito.
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendAddPointResultRequest"
+      responses:
+        '200':
+          description: Результат согласования принят / случилась ошибка.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SendAddPointResultResponse"
+        
+components:
+  schemas:
+
+    # /addPoint begin
+
+    AddPointRequest:
+      properties:
+        address:
+          $ref: '#/components/schemas/Address'
+        howToFind:
+          type: string
+          description: |
+            Описание маршрута к ПВЗ. Пример: Выход из последнего вагона, сначала прямо потом налево.
+        id:
+          type: string
+          description: |
+            Идентификатор точки (ПВЗ) в Avito.
+        name:
+          type: string
+        phones:
+          items:
+            type: string
+          type: array
+        schedule:
+          $ref: '#/components/schemas/Schedule'
+      required:
+        - id
+        - address
+        - name
+        - howToFind
+        - phones
+        - schedule
+      type: object
+
+    AddPointResponse:
+      properties:
+        data:
+          $ref: '#/components/schemas/AddPointResultData'
+        error:
+          $ref: '#/components/schemas/AddPointError'
+      type: object
+
+    AddPointResultData:
+      properties:
+        status:
+          description: |
+            Результат согласования
+
+            - `OK` – точка (ПВЗ) создана на стороне транспортной компании и согласована.
+            - `ASYNC` – решение об обслуживании будет принято и сообщено позже.
+          type: string
+          example: "OK"
+          enum: [
+            "OK",
+            "ASYNC",
+          ]
+      required:
+        - status
+      type: object
+
+    AddPointError:
+      type: object
+      description: Ошибка.
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: |
+            Код ошибки.
+
+            - `VALIDATION_ERROR` – ошибка валидации данных (например, длина передаваемого поля превышает допустимые лимиты, или какое-то поле отсутствует). 
+            В поле `error.message` должно содержаться пояснение, какое поле не прошло валидацию.
+            - `FORBIDDEN` – ПВЗ, указанный в запросе, не может обслуживаться транспортной компанией.
+
+            Все перечисленные ошибки – "терминальные". 
+            При получении этих ошибок Avito не будет выполнять повторные запросы, т.к. повтор приведет к тому же результату.
+
+            Список в дальнейшем может пополняться.
+          example: "FORBIDDEN"
+          enum: [
+            "FORBIDDEN",
+            "VALIDATION_ERROR",
+          ]
+        message:
+          $ref: "#/components/schemas/ErrorMessage"
+      
+    # /addPoint end
+  
+    # /updatePoint start
+      
+    UpdatePointRequest:
+      properties:
+        howToFind:
+          type: string
+        id:
+          type: string
+        phones:
+          items:
+            type: string
+          type: array
+        schedule:
+          $ref: '#/components/schemas/Schedule'
+      required:
+        - id
+        - howToFind
+        - phones
+        - schedule
+      type: object
+
+    UpdatePointResponse:
+      properties:
+        error:
+          $ref: '#/components/schemas/UpdatePointError'
+      type: object
+
+    UpdatePointError:
+      type: object
+      description: Ошибка.
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: |
+            Код ошибки.
+
+            - `VALIDATION_ERROR` – ошибка валидации данных (например, длина передаваемого поля превышает допустимые лимиты, или какое-то поле отсутствует). 
+            В поле `error.message` должно содержаться пояснение, какое поле не прошло валидацию.
+            - `NOT_FOUND` – ПВЗ, указанный в запросе, не найден на стороне транспортной компании (не был ранее создан). 
+
+            Все перечисленные ошибки – "терминальные". 
+            При получении этих ошибок Avito не будет выполнять повторные запросы, т.к. повтор приведет к тому же результату.
+
+            Список в дальнейшем может пополняться.
+          example: "FORBIDDEN"
+          enum: [
+            "FORBIDDEN",
+            "NOT_FOUND",
+          ]
+        message:
+          $ref: "#/components/schemas/ErrorMessage"
+      
+    # /updatePoint end
+
+    # /sendAddPointResult start
+    
+    SendAddPointResultRequest:
+      properties:
+        id:
+          description: |
+            Внешний идентификатор ПВЗ
+          type: string
+        reason:
+          description: |
+            Причина отказа в обслуживании
+          type: string
+        result:
+          description: |
+            Результат согласования
+            
+            - `OK` – точка (ПВЗ) создана на стороне транспортной компании и согласована.
+            - `FORBIDDEN` – транспортная компания не будет обслуживать точку.
+          type: string
+          example: "OK"
+          enum: [
+            "OK",
+            "FORBIDDEN",
+          ]
+      required:
+        - id
+        - result
+        - reason
+      type: object
+
+    SendAddPointResultResponse:
+      properties:
+        error:
+          $ref: '#/components/schemas/Error'
+      type: object
+      
+    # /sendAddPointResult end
+
+    # Common
+
+    Address:
+      properties:
+        addressRow:
+          description: Полный адрес
+          type: string
+          example: "Челябинская обл, Магнитогорск, Герцена ул, д.6"
+        building:
+          description: Строение
+          type: string
+          example: "2"
+        country:
+          description: Страна
+          type: string
+          example: "Российская Федерация"
+        floor:
+          description: Этаж
+          type: integer
+          example: 1
+        house:
+          description: Дом
+          type: integer
+          example: 2
+        housing:
+          type: integer
+          example: 4
+        latitude:
+          description: Долгота
+          type: number
+          example: 52.3295026
+        locality:
+          description: Населенный пункт
+          type: string
+          example: "Набережные Челны"
+        localityType:
+          description: Тип населенного пункта
+          type: string
+          example: "город"
+        longitude:
+          description: Широта
+          type: number
+          example: 55.697951
+        porch:
+          type: integer
+          example: 3
+        region:
+          description: Регион
+          type: string
+          example: "Республика Татарстан"
+        room:
+          type: integer
+          example: 8
+        street:
+          description: Улица
+          type: string
+          example: "ленина"
+        subRegion:
+          description: Административно-территориальная единица
+          type: string
+          example: "Набережные Челны"
+        subRegionType:
+          description: Вид административной территориальной единицы (район, округ и
+            т.д.)
+          type: string
+          example: "городской округ"
+        zipCode:
+          description: Почтовый индекс
+          type: string
+          example: "324654"
+      required:
+        - addressRow
+        - country
+        - zipCode
+        - region
+        - subRegion
+        - subRegionType
+        - locality
+        - localityType
+        - street
+        - house
+        - housing
+        - building
+        - porch
+        - floor
+        - room
+        - latitude
+        - longitude
+      type: object
+
+    Schedule:
+      properties:
+        mon:
+          items:
+            type: string
+          type: array
+          example: ["09:00:00/12:00:00","13:00:00/18:00:00"]
+        tue:
+          items:
+            type: string
+          type: array
+          example: ["09:00:00/12:00:00","13:00:00/18:00:00"]
+        wed:
+          items:
+            type: string
+          type: array
+          example: ["09:00:00/12:00:00","13:00:00/18:00:00"]
+        thu:
+          items:
+            type: string
+          type: array
+          example: ["09:00:00/12:00:00","13:00:00/18:00:00"]
+        fri:
+          items:
+            type: string
+          type: array
+          example: ["09:00:00/12:00:00","13:00:00/18:00:00"]
+        sat:
+          items:
+            type: string
+          type: array
+          example: ["09:00:00/12:00:00","13:00:00/18:00:00"]
+        sun:
+          items:
+            type: string
+          type: array
+          example: []
+      required:
+        - mon
+        - tue
+        - wed
+        - thu
+        - fri
+        - sat
+        - sun
+      type: object
+
+    Error:
+      type: object
+      description: Ошибка.
+      required:
+        - code
+        - message
+      properties:
+        code:
+          $ref: "#/components/schemas/ErrorCode"
+        message:
+          $ref: "#/components/schemas/ErrorMessage"
+
+    ErrorCode:
+      type: string
+      description: |
+        Код ошибки.
+
+        Поле в общем случае должно использоваться автоматикой для обработки ошибки.
+      example: "ANY_ERROR"
+
+    ErrorMessage:
+      type: string
+      description: |
+        Человекочитаемые детали произошедшей ошибки. 
+
+        Поле будет использоваться живыми людьми для диагностирования проблемы.
+      example: "Something went wrong, due to position of Mercury."
+
+  responses:
+    Unauthorized:
+      description: Требуется аутентификация.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                $ref: '#/components/schemas/Error'
+
+    Forbidden:
+      description: Неверный Token/Oauth Scope.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                $ref: '#/components/schemas/Error'
+
+    InternalServerError:
+      description: Internal Server Error.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                $ref: '#/components/schemas/Error'
