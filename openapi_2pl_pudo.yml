@@ -7,6 +7,9 @@ servers:
   - url: http://localhost:8080/
     description: API создания и редактирования точек (ПВЗ).
 
+security:
+  - bearerAuth: [ ]
+
 paths:
   /addPoint/:
     post:
@@ -50,7 +53,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/UpdatePointResponse"
-  /sendAddPointResult/:
+  /addPointAsyncResult/:
     post:
       description: |
         Метод отправки результата создания точки (ПВЗ).
@@ -63,14 +66,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SendAddPointResultRequest"
+              $ref: "#/components/schemas/AddPointAsyncRequest"
       responses:
         '200':
           description: Результат согласования принят / случилась ошибка.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SendAddPointResultResponse"
+                $ref: "#/components/schemas/AddPointAsyncResponse"
         
 components:
   schemas:
@@ -219,9 +222,9 @@ components:
       
     # /updatePoint end
 
-    # /sendAddPointResult start
+    # /addPointAsyncResult start
     
-    SendAddPointResultRequest:
+    AddPointAsyncRequest:
       properties:
         id:
           description: |
@@ -246,16 +249,15 @@ components:
       required:
         - id
         - result
-        - reason
       type: object
 
-    SendAddPointResultResponse:
+    AddPointAsyncResponse:
       properties:
         error:
           $ref: '#/components/schemas/Error'
       type: object
       
-    # /sendAddPointResult end
+    # /addPointAsyncResult end
 
     # Common
 
