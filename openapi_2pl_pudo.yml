@@ -111,6 +111,7 @@ components:
         - howToFind
         - phones
         - schedule
+        - organizationName
       type: object
 
     AddPointResponse:
