@@ -98,6 +98,10 @@ components:
           items:
             type: string
           type: array
+        organizationName:
+          type: string
+          description: |
+            Наименование юр. лица.
         schedule:
           $ref: '#/components/schemas/Schedule'
       required:
