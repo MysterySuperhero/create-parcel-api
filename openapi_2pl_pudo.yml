@@ -336,20 +336,11 @@ components:
           example: "324654"
       required:
         - addressRow
-        - country
         - zipCode
         - region
-        - subRegion
-        - subRegionType
         - locality
-        - localityType
         - street
         - house
-        - housing
-        - building
-        - porch
-        - floor
-        - room
         - latitude
         - longitude
       type: object
