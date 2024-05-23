@@ -286,11 +286,11 @@ components:
           example: 1
         house:
           description: Дом
-          type: integer
-          example: 2
+          type: string
+          example: "2"
         housing:
-          type: integer
-          example: 4
+          type: string
+          example: "4"
         latitude:
           description: Долгота
           type: number
@@ -308,15 +308,15 @@ components:
           type: number
           example: 55.697951
         porch:
-          type: integer
-          example: 3
+          type: string
+          example: "3"
         region:
           description: Регион
           type: string
           example: "Республика Татарстан"
         room:
-          type: integer
-          example: 8
+          type: string
+          example: "8"
         street:
           description: Улица
           type: string
