@@ -361,7 +361,7 @@ components:
     CreateParcelItemWeight:
       required:
         - accuracy
-        - values
+        - value
       properties:
         accuracy:
           $ref: "#/components/schemas/CreateParcelPropertyAccuracy"
