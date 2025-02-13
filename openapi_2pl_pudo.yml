@@ -345,8 +345,6 @@ components:
         - zipCode
         - region
         - locality
-        - street
-        - house
         - latitude
         - longitude
       type: object
