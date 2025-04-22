@@ -217,6 +217,10 @@ components:
               $ref: "#/components/schemas/CreateParcelOptionsReturnPolicy"
             unclaimed:
               $ref: "#/components/schemas/CreateParcelOptionsReturnPolicy"
+        replacementBarcode:
+          type: string
+          description: |
+            Штрихкод для замены. Передается, когда есть необходимость в переклейке штрих-кода на посылке.
         tags:
           type: array
           description: |
