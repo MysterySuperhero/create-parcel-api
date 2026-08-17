@@ -179,21 +179,33 @@ components:
       properties:
         howToFind:
           type: string
+          description: |
+            Описание маршрута к ПВЗ. Пример: Выход из последнего вагона, сначала прямо потом налево.
+        organizationName:
+          type: string
+          description: |
+            Наименование юр. лица.
         id:
           type: string
+          description: |
+            Идентификатор точки (ПВЗ) в Avito.
         email:
           type: string
         phones:
           items:
             type: string
           type: array
+        address:
+          $ref: '#/components/schemas/Address'
         schedule:
           $ref: '#/components/schemas/Schedule'
       required:
         - id
+        - organizationName
         - howToFind
         - email
         - phones
+        - address
         - schedule
       type: object
 
